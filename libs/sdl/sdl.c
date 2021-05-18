@@ -530,6 +530,10 @@ HL_PRIM void HL_NAME(win_get_size)(SDL_Window *win, int *width, int *height) {
 	SDL_GetWindowSize(win, width, height);
 }
 
+HL_PRIM void HL_NAME(win_get_drawable_size)(SDL_Window *win, int *width, int *height) {
+	SDL_GL_GetDrawableSize(win, width, height);
+}
+
 HL_PRIM void HL_NAME(win_get_min_size)(SDL_Window *win, int *width, int *height) {
 	SDL_GetWindowMinimumSize(win, width, height);
 }
@@ -606,6 +610,7 @@ DEFINE_PRIM(_VOID, win_set_size, TWIN _I32 _I32);
 DEFINE_PRIM(_VOID, win_set_min_size, TWIN _I32 _I32);
 DEFINE_PRIM(_VOID, win_set_max_size, TWIN _I32 _I32);
 DEFINE_PRIM(_VOID, win_get_size, TWIN _REF(_I32) _REF(_I32));
+DEFINE_PRIM(_VOID, win_get_drawable_size, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_VOID, win_get_min_size, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_VOID, win_get_max_size, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_F64, win_get_opacity, TWIN);

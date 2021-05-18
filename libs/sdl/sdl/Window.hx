@@ -59,6 +59,7 @@ class Window {
 	public var displayMode(default, set) : DisplayMode;
 	public var visible(default, set) : Bool = true;
 	public var opacity(get, set) : Float;
+	public var devicePixelRatio(get, never) : Float;
 
 	public function new( title : String, width : Int, height : Int, x : Int = SDL_WINDOWPOS_CENTERED, y : Int = SDL_WINDOWPOS_CENTERED, sdlFlags : Int = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE ) {
 		while( true ) {
@@ -168,6 +169,12 @@ class Window {
 
 	public function center() {
 		setPosition(SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	}
+
+	function get_devicePixelRatio() {
+		var pixelHeight = 0;
+		winGetDrawableSize(win, null, pixelHeight);
+		return pixelHeight / (height:Float);
 	}
 
 	function get_width() {
@@ -310,6 +317,9 @@ class Window {
 	}
 
 	static function winGetSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
+	}
+
+	static function winGetDrawableSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
 	}
 
 	static function winGetMinSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {

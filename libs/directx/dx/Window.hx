@@ -38,6 +38,7 @@ class Window {
 	public var visible(default, set) : Bool = true;
 	public var opacity(get, set) : Float;
 	public var vsync : Bool;
+	public var devicePixelRatio(get, never) : Float;
 
 	public function new( title : String, width : Int, height : Int, x : Int = CW_USEDEFAULT, y : Int = CW_USEDEFAULT, windowFlags : Int = RESIZABLE ) {
 		win = winCreateEx(x, y, width, height, windowFlags);
@@ -98,6 +99,11 @@ class Window {
 
 	public function center( centerPrimary : Bool = true ) {
 		winCenter(win, centerPrimary);
+	}
+
+	function get_devicePixelRatio() {
+		// Not yet implemented
+		return 1.0;
 	}
 
 	function get_width() {
