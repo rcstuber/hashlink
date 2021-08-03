@@ -90,9 +90,7 @@ static void *get_thread_stackptr( thread_handle *t, void **eip ) {
 	return (void*)c.Esp;
 #	endif
 #elif defined(HL_MAC)
-	//printf("READ STACK REG FOR PID %i\n",pid);
 	*eip = mdbg_read_register(getpid(), t->tid, REG_RIP, true);
-	//printf("EIP: %i\n",&eip);
 	return mdbg_read_register(getpid(), t->tid, REG_RSP, true);
 #else
 	return NULL;
@@ -103,8 +101,7 @@ static void thread_data_init( thread_handle *t ) {
 #ifdef HL_WIN
 	t->h = OpenThread(THREAD_ALL_ACCESS,FALSE, t->tid);
 #elif defined(HL_MAC)
-//printf("INIT PROFILER FOR MAC\n");
-	//mdbg_session_attach(hl_sys_getpid());
+	// Do we need this?
 #endif
 }
 
@@ -112,7 +109,7 @@ static void thread_data_free( thread_handle *t ) {
 #ifdef HL_WIN
 	CloseHandle(t->h);
 #elif defined(HL_MAC)
-printf("CLOSE PROFILER FOR MAC\n");
+	// Do we need this?
 #endif
 }
 
@@ -128,7 +125,6 @@ static bool pause_thread( thread_handle *t, bool b ) {
 	if( b ) {
 		return mdbg_pause_thread(getpid(), t->tid);
 	} else {
-		//while(mdbg_is_thread_paused(getpid(), t->tid)) {
 		return mdbg_resume_thread(getpid(), t->tid);
 	}
 #else
@@ -165,10 +161,8 @@ static void read_thread_data( thread_handle *t ) {
 		return;
 	}
 
-	//printf("register RIP is: 0x%08x\n", *(uint64_t*)eip);
-	//printf("register RSP is: 0x%08x\n", *(uint64_t*)stack);
-//printf("Stack RIP: %i\n", *(int*)eip);
-//printf("Stack RSP: %i\n\n", *(int*)stack);
+	printf("register RIP is: 0x%08x\n", *(uint64_t*)eip);
+	printf("register RSP is: 0x%08x\n", *(uint64_t*)stack);
 
 	int size = (int)((unsigned char*)t->inf->stack_top - (unsigned char*)stack);
 	if( size > MAX_STACK_SIZE-32 ) size = MAX_STACK_SIZE-32;
