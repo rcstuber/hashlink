@@ -25,7 +25,7 @@
 #include <mach/mach_types.h>
 
 #ifndef MDBG_DEBUG
-#define MDBG_DEBUG 0
+#define MDBG_DEBUG 1
 #endif
 
 #ifndef MDBG_LOG_LEVEL
@@ -107,3 +107,11 @@ extern status_t        MDBG_API(write_memory)( pid_t pid, unsigned char* addr, u
 extern void*           MDBG_API(read_register)( pid_t pid, int thread, int reg, bool is64 );
 
 extern status_t        MDBG_API(write_register)( pid_t pid, int thread, int reg, void *value, bool is64 );
+
+extern status_t        MDBG_API(pause_thread)( pid_t pid, int thread );
+
+extern status_t        MDBG_API(resume_thread)( pid_t pid, int thread );
+
+extern status_t        MDBG_API(is_thread_running)( pid_t pid, int thread );
+
+extern status_t        MDBG_API(is_thread_paused)( pid_t pid, int thread );

@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+ // See for MACH references: https://web.mit.edu/darwin/src/modules/xnu/osfmk/man/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -494,7 +496,7 @@ static mach_port_t get_thread(mach_port_t mach_task, uint thread_id) {
     exit(0); // TODO: catch better
 }
 
-static thread_identifier_info_data_t* get_thread_info(thread_t thread) {
+static thread_identifier_info_data_t* get_thread_id_info(thread_t thread) {
 
   thread_identifier_info_data_t *tident = safe_malloc(sizeof(thread_identifier_info_data_t));
   mach_msg_type_number_t tident_count = THREAD_IDENTIFIER_INFO_COUNT;
@@ -505,8 +507,34 @@ static thread_identifier_info_data_t* get_thread_info(thread_t thread) {
   return tident;
 }
 
+static thread_basic_info_data_t* get_thread_basic_info(thread_t thread) {
+  
+  thread_basic_info_data_t *tinfo = safe_malloc(sizeof(thread_basic_info_data_t));
+  mach_msg_type_number_t tident_count = THREAD_IDENTIFIER_INFO_COUNT;
+  kern_return_t kret = thread_info (thread, THREAD_BASIC_INFO, (thread_info_t)tinfo, &tident_count);
+
+  EXIT_ON_MACH_ERROR(kret, "failed to get basic thread info");
+
+  return tinfo;
+}
+
+static integer_t get_thread_run_state(thread_t thread) {
+    thread_basic_info_data_t *tinfo = get_thread_basic_info(thread);
+    return tinfo->run_state;
+}
+
+static bool get_thread_is_running(thread_t thread) {
+    integer_t runstate = get_thread_run_state(thread);
+    return runstate == TH_STATE_RUNNING;
+}
+
+static bool get_thread_is_suspended(thread_t thread) {
+    integer_t runstate = get_thread_run_state(thread);
+    return runstate == TH_STATE_HALTED;
+}
+
 static uint64_t get_thread_id(thread_t thread) {
-    thread_identifier_info_data_t *tinfo = get_thread_info(thread);
+    thread_identifier_info_data_t *tinfo = get_thread_id_info(thread);
     return tinfo->thread_id;
 }
 
@@ -530,6 +558,24 @@ static kern_return_t set_thread_state(thread_t mach_thread, x86_thread_state64_t
     if (kret != KERN_SUCCESS) {
         DEBUG_PRINT("Error failed with message %s!\n", mach_error_string(kret));
         exit(0);
+    }
+    return kret;
+}
+
+static kern_return_t suspend_thread(thread_t mach_thread) {
+
+    kern_return_t kret = thread_suspend(mach_thread);
+    if (kret != KERN_SUCCESS) {
+        DEBUG_PRINT("Error failed to suspend thread\n");
+    }
+    return kret;
+}
+
+static kern_return_t resume_thread(thread_t mach_thread) {
+
+    kern_return_t kret = thread_resume(mach_thread);
+    if (kret != KERN_SUCCESS) {
+        DEBUG_PRINT("Error failed to resume thread\n");
     }
     return kret;
 }
@@ -881,4 +927,20 @@ void* MDBG_API(read_register)( pid_t pid, int thread, int reg, bool is64 ) {
 
 status_t MDBG_API(write_register)( pid_t pid, int thread, int reg, void *value, bool is64 ) {
     return write_register( get_task(pid), thread, reg, value, is64 ) == KERN_SUCCESS;
+}
+
+status_t MDBG_API(pause_thread)( pid_t pid, int thread ) {
+    return suspend_thread( get_thread(get_task(pid), thread) ) == KERN_SUCCESS;
+}
+
+status_t MDBG_API(resume_thread)( pid_t pid, int thread ) {
+    return resume_thread( get_thread(get_task(pid), thread) ) == KERN_SUCCESS;
+}
+
+status_t MDBG_API(is_thread_running)( pid_t pid, int thread ) {
+    return get_thread_is_running( get_thread(get_task(pid), thread) );
+}
+
+status_t MDBG_API(is_thread_paused)( pid_t pid, int thread ) {
+    return get_thread_is_suspended( get_thread(get_task(pid), thread) );
 }

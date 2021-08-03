@@ -22,6 +22,10 @@
 #include <hl.h>
 #include <hlmodule.h>
 
+#ifdef HL_MAC
+#	include <mdbg/mdbg.h>
+#endif
+
 #define MAX_STACK_SIZE (8 << 20)
 #define MAX_STACK_COUNT 2048
 
@@ -85,6 +89,11 @@ static void *get_thread_stackptr( thread_handle *t, void **eip ) {
 	*eip = (void*)c.Eip;
 	return (void*)c.Esp;
 #	endif
+#elif defined(HL_MAC)
+	//printf("READ STACK REG FOR PID %i\n",pid);
+	*eip = mdbg_read_register(getpid(), t->tid, REG_RIP, true);
+	//printf("EIP: %i\n",&eip);
+	return mdbg_read_register(getpid(), t->tid, REG_RSP, true);
 #else
 	return NULL;
 #endif
@@ -93,12 +102,17 @@ static void *get_thread_stackptr( thread_handle *t, void **eip ) {
 static void thread_data_init( thread_handle *t ) {
 #ifdef HL_WIN
 	t->h = OpenThread(THREAD_ALL_ACCESS,FALSE, t->tid);
+#elif defined(HL_MAC)
+//printf("INIT PROFILER FOR MAC\n");
+	//mdbg_session_attach(hl_sys_getpid());
 #endif
 }
 
 static void thread_data_free( thread_handle *t ) {
 #ifdef HL_WIN
 	CloseHandle(t->h);
+#elif defined(HL_MAC)
+printf("CLOSE PROFILER FOR MAC\n");
 #endif
 }
 
@@ -109,6 +123,13 @@ static bool pause_thread( thread_handle *t, bool b ) {
 	else {
 		ResumeThread(t->h);
 		return true;
+	}
+#elif defined(HL_MAC)
+	if( b ) {
+		return mdbg_pause_thread(getpid(), t->tid);
+	} else {
+		//while(mdbg_is_thread_paused(getpid(), t->tid)) {
+		return mdbg_resume_thread(getpid(), t->tid);
 	}
 #else
 	return false;
@@ -143,6 +164,11 @@ static void read_thread_data( thread_handle *t ) {
 		pause_thread(t,false);
 		return;
 	}
+
+	//printf("register RIP is: 0x%08x\n", *(uint64_t*)eip);
+	//printf("register RSP is: 0x%08x\n", *(uint64_t*)stack);
+//printf("Stack RIP: %i\n", *(int*)eip);
+//printf("Stack RSP: %i\n\n", *(int*)stack);
 
 	int size = (int)((unsigned char*)t->inf->stack_top - (unsigned char*)stack);
 	if( size > MAX_STACK_SIZE-32 ) size = MAX_STACK_SIZE-32;
@@ -211,7 +237,7 @@ static void hl_profile_loop( void *_ ) {
 static void profile_event( int code, vbyte *data, int dataLen );
 
 void hl_profile_setup( int sample_count ) {
-#	if defined(HL_THREADS) && defined(HL_WIN_DESKTOP)
+#	if defined(HL_THREADS) && ( defined(HL_WIN_DESKTOP) || defined(HL_MAC) )
 	hl_setup_profiler(profile_event,hl_profile_end);
 	if( data.sample_count ) return;
 	if( sample_count < 0 ) {
