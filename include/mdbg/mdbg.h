@@ -36,6 +36,8 @@
 
 typedef bool        status_t;
 
+typedef thread_t    mdbg_thread_handle;
+
 struct exception_ports_info;
 
 typedef struct debug_session {
@@ -50,6 +52,7 @@ typedef struct debug_session {
 
     int process_status;
 } debug_session;
+
 
 
 /* x64 Registers */
@@ -108,10 +111,19 @@ extern void*           MDBG_API(read_register)( pid_t pid, int thread, int reg, 
 
 extern status_t        MDBG_API(write_register)( pid_t pid, int thread, int reg, void *value, bool is64 );
 
-extern status_t        MDBG_API(pause_thread)( pid_t pid, int thread );
 
-extern status_t        MDBG_API(resume_thread)( pid_t pid, int thread );
+// Thread API
 
-extern status_t        MDBG_API(is_thread_running)( pid_t pid, int thread );
+extern mdbg_thread_handle   MDBG_API(get_thread)( pid_t pid, int thread );
 
-extern status_t        MDBG_API(is_thread_paused)( pid_t pid, int thread );
+extern void*           MDBG_API(thread_read_register)( mdbg_thread_handle h, int reg, bool is64 );
+
+extern status_t        MDBG_API(thread_write_register)( mdbg_thread_handle h, int reg, void *value, bool is64 );
+
+extern status_t        MDBG_API(thread_pause)( mdbg_thread_handle h );
+
+extern status_t        MDBG_API(thread_resume)( mdbg_thread_handle h );
+
+extern status_t        MDBG_API(thread_is_running)( mdbg_thread_handle h );
+
+extern status_t        MDBG_API(thread_is_paused)( mdbg_thread_handle h );

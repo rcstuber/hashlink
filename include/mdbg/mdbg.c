@@ -47,7 +47,6 @@
 
 #include "mdbg.h"
 
-
 #pragma mark Defines
 
 
@@ -80,6 +79,8 @@ static void* task_exception_server (mach_port_t exception_port);
 
 
 #pragma mark Structs
+
+typedef thread_t    thread_handle;
 
 typedef struct {
     debug_session **list;
@@ -388,10 +389,8 @@ __uint64_t *get_debug_reg( x86_debug_state64_t *regs, int r ) {
     return NULL;
 }
 
-__uint64_t read_register(mach_port_t task, int thread, int reg, bool is64 ) {
+__uint64_t read_register(thread_t mach_thread, int reg, bool is64 ) {
     __uint64_t *rdata;
-    mach_port_t mach_thread = get_thread(task, thread);
-
     if(reg >= REG_DR0) {
         x86_debug_state64_t *regs = get_debug_state(mach_thread);
         rdata = get_debug_reg(regs, reg - 4);
@@ -405,12 +404,10 @@ __uint64_t read_register(mach_port_t task, int thread, int reg, bool is64 ) {
     return *rdata;
 }
 
-static kern_return_t write_register(mach_port_t task, int thread, int reg, void *value, bool is64 ) {
+static kern_return_t write_register(thread_t mach_thread, int reg, void *value, bool is64 ) {
     DEBUG_PRINT_VERBOSE("write register %i (%s) on thread %i", reg, get_register_name(reg), thread);
 
     __uint64_t *rdata;
-    mach_port_t mach_thread = get_thread(task, thread);
-
     if(reg >= REG_DR0) {
         x86_debug_state64_t *regs = get_debug_state(mach_thread);
         rdata = get_debug_reg(regs, reg - 4);
@@ -496,45 +493,45 @@ static mach_port_t get_thread(mach_port_t mach_task, uint thread_id) {
     exit(0); // TODO: catch better
 }
 
-static thread_identifier_info_data_t* get_thread_id_info(thread_t thread) {
+static thread_identifier_info_data_t* get_thread_id_info(thread_t mach_thread) {
 
   thread_identifier_info_data_t *tident = safe_malloc(sizeof(thread_identifier_info_data_t));
   mach_msg_type_number_t tident_count = THREAD_IDENTIFIER_INFO_COUNT;
-  kern_return_t kret = thread_info (thread, THREAD_IDENTIFIER_INFO, (thread_info_t)tident, &tident_count);
+  kern_return_t kret = thread_info (mach_thread, THREAD_IDENTIFIER_INFO, (thread_info_t)tident, &tident_count);
 
   EXIT_ON_MACH_ERROR(kret, "failed to get thread info");
 
   return tident;
 }
 
-static thread_basic_info_data_t* get_thread_basic_info(thread_t thread) {
+static thread_basic_info_data_t* get_thread_basic_info(thread_t mach_thread) {
   
   thread_basic_info_data_t *tinfo = safe_malloc(sizeof(thread_basic_info_data_t));
   mach_msg_type_number_t tident_count = THREAD_IDENTIFIER_INFO_COUNT;
-  kern_return_t kret = thread_info (thread, THREAD_BASIC_INFO, (thread_info_t)tinfo, &tident_count);
+  kern_return_t kret = thread_info (mach_thread, THREAD_BASIC_INFO, (thread_info_t)tinfo, &tident_count);
 
   EXIT_ON_MACH_ERROR(kret, "failed to get basic thread info");
 
   return tinfo;
 }
 
-static integer_t get_thread_run_state(thread_t thread) {
-    thread_basic_info_data_t *tinfo = get_thread_basic_info(thread);
+static integer_t get_thread_run_state(thread_t mach_thread) {
+    thread_basic_info_data_t *tinfo = get_thread_basic_info(mach_thread);
     return tinfo->run_state;
 }
 
-static bool get_thread_is_running(thread_t thread) {
-    integer_t runstate = get_thread_run_state(thread);
+static bool get_thread_is_running(thread_t mach_thread) {
+    integer_t runstate = get_thread_run_state(mach_thread);
     return runstate == TH_STATE_RUNNING;
 }
 
-static bool get_thread_is_suspended(thread_t thread) {
-    integer_t runstate = get_thread_run_state(thread);
+static bool get_thread_is_suspended(thread_t mach_thread) {
+    integer_t runstate = get_thread_run_state(mach_thread);
     return runstate == TH_STATE_HALTED;
 }
 
-static uint64_t get_thread_id(thread_t thread) {
-    thread_identifier_info_data_t *tinfo = get_thread_id_info(thread);
+static uint64_t get_thread_id(thread_t mach_thread) {
+    thread_identifier_info_data_t *tinfo = get_thread_id_info(mach_thread);
     return tinfo->thread_id;
 }
 
@@ -922,25 +919,40 @@ status_t MDBG_API(write_memory)( pid_t pid, unsigned char* addr, unsigned char* 
 }
 
 void* MDBG_API(read_register)( pid_t pid, int thread, int reg, bool is64 ) {
-    return (void*)read_register( get_task(pid), thread, reg, is64 );
+    return (void*)read_register( get_thread(get_task(pid), thread), reg, is64 );
 }
 
 status_t MDBG_API(write_register)( pid_t pid, int thread, int reg, void *value, bool is64 ) {
-    return write_register( get_task(pid), thread, reg, value, is64 ) == KERN_SUCCESS;
+    return write_register( get_thread(get_task(pid), thread), reg, value, is64 ) == KERN_SUCCESS;
 }
 
-status_t MDBG_API(pause_thread)( pid_t pid, int thread ) {
-    return suspend_thread( get_thread(get_task(pid), thread) ) == KERN_SUCCESS;
+
+// Thread API
+
+thread_handle MDBG_API(get_thread)( pid_t pid, int thread ) {
+    return get_thread( get_task(pid), thread );
 }
 
-status_t MDBG_API(resume_thread)( pid_t pid, int thread ) {
-    return resume_thread( get_thread(get_task(pid), thread) ) == KERN_SUCCESS;
+void* MDBG_API(thread_read_register)( thread_handle h, int reg, bool is64 ) {
+    return (void*)read_register( h, reg, is64 );
 }
 
-status_t MDBG_API(is_thread_running)( pid_t pid, int thread ) {
-    return get_thread_is_running( get_thread(get_task(pid), thread) );
+status_t MDBG_API(thread_write_register)( thread_handle h, int reg, void *value, bool is64 ) {
+    return write_register( h, reg, value, is64 ) == KERN_SUCCESS;
 }
 
-status_t MDBG_API(is_thread_paused)( pid_t pid, int thread ) {
-    return get_thread_is_suspended( get_thread(get_task(pid), thread) );
+status_t MDBG_API(thread_pause)( thread_handle h ) {
+    return suspend_thread( h ) == KERN_SUCCESS;
+}
+
+status_t MDBG_API(thread_resume)( thread_handle h ) {
+    return resume_thread( h ) == KERN_SUCCESS;
+}
+
+status_t MDBG_API(thread_is_running)( thread_handle h ) {
+    return get_thread_is_running( h );
+}
+
+status_t MDBG_API(thread_is_paused)( thread_handle h ) {
+    return get_thread_is_suspended( h );
 }

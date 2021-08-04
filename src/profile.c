@@ -49,6 +49,9 @@ struct _thread_handle {
 #	ifdef HL_WIN_DESKTOP
 	HANDLE h;
 #	endif
+#	ifdef HL_MAC
+	mdbg_thread_handle h;
+#	endif
 	hl_thread_info *inf;
 	thread_handle *next;
 };
@@ -90,8 +93,8 @@ static void *get_thread_stackptr( thread_handle *t, void **eip ) {
 	return (void*)c.Esp;
 #	endif
 #elif defined(HL_MAC)
-	*eip = mdbg_read_register(getpid(), t->tid, REG_RIP, true);
-	return mdbg_read_register(getpid(), t->tid, REG_RSP, true);
+	*eip = mdbg_thread_read_register(t->h, REG_RIP, true);
+	return mdbg_thread_read_register(t->h, REG_RSP, true);
 #else
 	return NULL;
 #endif
@@ -101,15 +104,13 @@ static void thread_data_init( thread_handle *t ) {
 #ifdef HL_WIN
 	t->h = OpenThread(THREAD_ALL_ACCESS,FALSE, t->tid);
 #elif defined(HL_MAC)
-	// Do we need this?
+	t->h = mdbg_get_thread(getpid(), t->tid);
 #endif
 }
 
 static void thread_data_free( thread_handle *t ) {
 #ifdef HL_WIN
 	CloseHandle(t->h);
-#elif defined(HL_MAC)
-	// Do we need this?
 #endif
 }
 
@@ -123,9 +124,9 @@ static bool pause_thread( thread_handle *t, bool b ) {
 	}
 #elif defined(HL_MAC)
 	if( b ) {
-		return mdbg_pause_thread(getpid(), t->tid);
+		return mdbg_thread_pause(t->h);
 	} else {
-		return mdbg_resume_thread(getpid(), t->tid);
+		return mdbg_thread_resume(t->h);
 	}
 #else
 	return false;
@@ -161,24 +162,15 @@ static void read_thread_data( thread_handle *t ) {
 		return;
 	}
 
-	printf("register RIP is: 0x%08x\n", *(uint64_t*)eip);
-	printf("register RSP is: 0x%08x\n", *(uint64_t*)stack);
+	int count = hl_module_capture_stack_range(t->inf->stack_top,stack,data.stackOut,MAX_STACK_COUNT);
+    pause_thread(t, false);
 
-	int size = (int)((unsigned char*)t->inf->stack_top - (unsigned char*)stack);
-	if( size > MAX_STACK_SIZE-32 ) size = MAX_STACK_SIZE-32;
-	memcpy(data.tmpMemory + 2,stack,size);
-	pause_thread(t, false);
-	data.tmpMemory[0] = eip;
-	data.tmpMemory[1] = stack;
-	size += sizeof(void*) * 2;
-
-	int count = hl_module_capture_stack_range((char*)data.tmpMemory+size, (void**)data.tmpMemory, data.stackOut, MAX_STACK_COUNT);
-	int eventId = count | 0x80000000;
-	double time = hl_sys_time();
-	record_data(&time,sizeof(double));
-	record_data(&t->tid,sizeof(int));
-	record_data(&eventId,sizeof(int));
-	record_data(data.stackOut,sizeof(void*)*count);
+    int eventId = count | 0x80000000;
+    double time = hl_sys_time();
+    record_data(&time,sizeof(double));
+    record_data(&t->tid,sizeof(int));
+    record_data(&eventId,sizeof(int));
+    record_data(data.stackOut,sizeof(void*)*count);
 }
 
 static void hl_profile_loop( void *_ ) {
