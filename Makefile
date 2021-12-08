@@ -1,15 +1,20 @@
-
+UNAME := $(shell uname)
+ARCH := $(shell uname -p)
 LBITS := $(shell getconf LONG_BIT)
 MARCH ?= $(LBITS)
+
 PREFIX ?= /usr/local
 INSTALL_DIR ?= $(PREFIX)
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
 
-LIBS=fmt sdl ssl openal ui uv mysql
+LIBS=fmt sdl openal ui uv mysql ssl
 
-CFLAGS = -Wall -O3 -I src -msse2 -mfpmath=sse -std=c11 -I include -I include/pcre -I include/mikktspace -I include/minimp3 -D LIBHL_EXPORTS
+CFLAGS = -Wall -O3 -I src -std=c11 -I include -I include/pcre -I include/mikktspace -I include/minimp3 -D LIBHL_EXPORTS
+ifneq ($(ARCH), arm)
+CFLAGS += -msse2 -mfpmath=sse
+endif
 LFLAGS = -L. -lhl
 EXTRA_LFLAGS ?=
 LIBFLAGS =
@@ -49,7 +54,6 @@ LIB = ${PCRE} ${RUNTIME} ${STD}
 
 BOOT = src/_main.o
 
-UNAME := $(shell uname)
 
 # Cygwin
 ifeq ($(OS),Windows_NT)
@@ -65,9 +69,13 @@ endif
 else ifeq ($(UNAME),Darwin)
 
 # Mac
+ifeq ($(ARCH), arm)
+LIBPATH = /opt/homebrew
+endif
+LIBPATH ?= $(PREFIX)
 LIBEXT=dylib
-CFLAGS += -m$(MARCH) -I /usr/local/include -I /usr/local/opt/libjpeg-turbo/include -I /usr/local/opt/jpeg-turbo/include -I /usr/local/opt/sdl2/include/SDL2 -I /usr/local/opt/libvorbis/include -I /usr/local/opt/openal-soft/include -Dopenal_soft  -DGL_SILENCE_DEPRECATION
-LFLAGS += -Wl,-export_dynamic -L/usr/local/lib
+CFLAGS += -m$(MARCH) -I $(LIBPATH)/include -I $(LIBPATH)/opt/libjpeg-turbo/include -I $(LIBPATH)/opt/jpeg-turbo/include -I $(LIBPATH)/opt/sdl2/include/SDL2 -I $(LIBPATH)/opt/libvorbis/include -I $(LIBPATH)/opt/openal-soft/include -Dopenal_soft -DGL_SILENCE_DEPRECATION -DMBEDTLS_ALLOW_PRIVATE_ACCESS
+LFLAGS += -Wl,-export_dynamic -L$(LIBPATH)/lib
 
 ifdef OSX_SDK
 ISYSROOT = $(shell xcrun --sdk macosx$(OSX_SDK) --show-sdk-path)
@@ -75,15 +83,20 @@ CFLAGS += -isysroot $(ISYSROOT)
 LFLAGS += -isysroot $(ISYSROOT)
 endif
 
-LIBFLAGS += -L/usr/local/opt/libjpeg-turbo/lib -L/usr/local/opt/jpeg-turbo/lib -L/usr/local/lib -L/usr/local/opt/libvorbis/lib -L/usr/local/opt/openal-soft/lib
+LIBFLAGS += -L$(LIBPATH)/opt/libjpeg-turbo/lib -L$(LIBPATH)/opt/jpeg-turbo/lib -L$(LIBPATH)/lib -L$(LIBPATH)/opt/libvorbis/lib -L$(LIBPATH)/opt/openal-soft/lib
+ifeq ($(ARCH), arm)
+	LIBFLAGS += -L/
+endif
 LIBOPENGL = -framework OpenGL
 LIBOPENAL = -lopenal
 LIBSSL = -framework Security -framework CoreFoundation
 RELEASE_NAME = osx
 
-# Mac native debug
+# Mac native debug (x86 only)
+ifneq ($(ARCH), arm)
 HL_DEBUG = include/mdbg/mdbg.o include/mdbg/mach_excServer.o include/mdbg/mach_excUser.o
 LIB += ${HL_DEBUG}
+endif
 
 else
 
