@@ -287,7 +287,6 @@ int processIsTranslated() { // Returns 1 if running in Rosetta
 	 return -1;
 }
 
-
 #pragma mark Debug sessions
 
 
@@ -369,6 +368,39 @@ static debug_session *find_session_by_pid(pid_t pid) {
 #pragma mark Registers
 
 static uint64_t* get_register(x86_thread_state_t *state, int r) {
+
+    DEBUG_PRINT("Get register: %s", get_register_name(r));
+    DEBUG_PRINT("Thread flavor: %lu",state->tsh.flavor);
+    bool isValid = VALID_THREAD_STATE_FLAVOR(state->tsh.flavor);
+    DEBUG_PRINT("Thread flavor valid?  %s", isValid ? "yes" : "no");
+
+    x86_thread_state64_t *ts64 = &state->uts.ts64;
+    DEBUG_PRINT("------ 64bit registers: --------\n");
+    DEBUG_PRINT("RAX: %p", ts64->__rax);
+    DEBUG_PRINT("RBX: %p", ts64->__rbx);
+    DEBUG_PRINT("RCX: %p", ts64->__rcx);
+    DEBUG_PRINT("RDX: %p", ts64->__rdx);
+    DEBUG_PRINT("RDI: %p", ts64->__rdi);
+    DEBUG_PRINT("RSI: %p", ts64->__rsi);
+    DEBUG_PRINT("RBP: %p", ts64->__rbp);
+    DEBUG_PRINT("RSP: %p", ts64->__rsp);
+    DEBUG_PRINT("RIP: %p", ts64->__rip);
+    DEBUG_PRINT("RFLAGS: %p", ts64->__rflags);
+
+    x86_thread_state32_t *ts32 = &state->uts.ts32;
+    DEBUG_PRINT("------ 32bit registers: --------\n");
+    DEBUG_PRINT("EAX: %p", ts32->__eax);
+    DEBUG_PRINT("EBX: %p", ts32->__ebx);
+    DEBUG_PRINT("ECX: %p", ts32->__ecx);
+    DEBUG_PRINT("EDI: %p", ts32->__edi);
+    DEBUG_PRINT("ESI: %p", ts32->__esi);
+    DEBUG_PRINT("EBP: %p", ts32->__ebp);
+    DEBUG_PRINT("ESP: %p", ts32->__esp);
+    DEBUG_PRINT("EIP: %p", ts32->__eip);
+    DEBUG_PRINT("EFLAGS: %p", ts32->__eflags);
+
+    DEBUG_PRINT("------------------\n");
+
     if(state->tsh.flavor == x86_THREAD_STATE64) {
         DEBUG_PRINT("x86-64 flavor: %s", get_register_name(r));
         x86_thread_state64_t *regs = &state->uts.ts64;
@@ -455,8 +487,8 @@ __uint64_t read_register(mach_port_t task, int thread, int reg, bool is64 ) {
         rdata = get_register(regs, reg);
     }
 
-    DEBUG_PRINT_VERBOSE("register %s is: %p\n", get_register_name(reg), rdata);
-    return rdata;
+    DEBUG_PRINT_VERBOSE("register %s is: %p\n", get_register_name(reg), *rdata);
+    return *rdata;
 }
 
 static kern_return_t write_register(mach_port_t task, int thread, int reg, void *value, bool is64 ) {
@@ -468,14 +500,14 @@ static kern_return_t write_register(mach_port_t task, int thread, int reg, void 
     if(reg >= REG_DR0) {
         x86_debug_state_t *regs = get_debug_state(mach_thread);
         rdata = get_debug_register(regs, reg - 4);
-        DEBUG_PRINT_VERBOSE("register flag for %s was: %p\n",get_register_name(reg), rdata);
+        DEBUG_PRINT_VERBOSE("register flag for %s was: %p\n",get_register_name(reg), *rdata);
 
         *rdata = (__uint64_t)value;
         set_debug_state(mach_thread, regs);
     } else {
         x86_thread_state_t *regs = get_thread_state(mach_thread);
         rdata = get_register(regs, reg);
-        DEBUG_PRINT_VERBOSE("register flag for %s was: %p\n",get_register_name(reg), rdata);
+        DEBUG_PRINT_VERBOSE("register flag for %s was: %p\n",get_register_name(reg), *rdata);
 
         *rdata = (__uint64_t)value;
         set_thread_state(mach_thread, regs);
@@ -776,6 +808,8 @@ extern kern_return_t catch_mach_exception_raise_state_identity(
 
     x86_thread_state_t *state = (x86_thread_state_t *) old_state;
     x86_thread_state_t *newState = (x86_thread_state_t *) new_state;
+
+    DEBUG_PRINT("Current thread flavor: %lu", *flavor);
 
     debug_session *sess = find_session(task);
     sess->current_thread = get_thread_id(thread); /* set system-wide thread id */
