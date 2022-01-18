@@ -25,11 +25,11 @@
 #include <mach/mach_types.h>
 
 #ifndef MDBG_DEBUG
-#define MDBG_DEBUG 0
+#define MDBG_DEBUG 1
 #endif
 
 #ifndef MDBG_LOG_LEVEL
-#define MDBG_LOG_LEVEL 0
+#define MDBG_LOG_LEVEL 1
 #endif
 
 #define MDBG_API(func)    mdbg_##func

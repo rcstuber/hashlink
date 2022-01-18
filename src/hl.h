@@ -84,10 +84,9 @@
 #	define HL_64
 #endif
 
-/*
 #if defined(__arm64) || defined(__arm64__) || defined(__aarch64__)
 #	define HL_ARM64
-#endif*/
+#endif
 
 #if defined(__GNUC__)
 #	define HL_GCC

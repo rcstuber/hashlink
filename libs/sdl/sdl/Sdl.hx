@@ -102,7 +102,7 @@ class Sdl {
 				get_screen_height_of_window(@:privateAccess win.win);
 	}
 
-	@:hlNative("?sdl", "get_framerate")
+	@:hlNative("sdl", "get_framerate")
 	public static function getFramerate(win : sdl.Window.WinPtr) : Int {
 		return 0;
 	}
@@ -156,22 +156,23 @@ class Sdl {
 			return @:privateAccess String.fromUTF8(t);
 	}
 
-	@:hlNative("?sdl", "get_screen_width")
+	@:hlNative("sdl", "get_screen_width")
 	static function get_screen_width() : Int {
 		return 0;
 	}
 
-	@:hlNative("?sdl", "get_screen_height")
+	@:hlNative("sdl", "get_screen_height")
 	static function get_screen_height() : Int {
 		return 0;
 	}
 
-	@:hlNative("?sdl", "get_screen_width_of_window")
+	@:hlNative("sdl", "get_screen_width_of_window")
 	static function get_screen_width_of_window(win: sdl.Window.WinPtr) : Int {
 		return 0;
 	}
 
-	@:hlNative("?sdl", "get_screen_height_of_display")
+	
+	//@:hlNative("sdl", "get_screen_height_of_display")
 	static function get_screen_height_of_window(win: sdl.Window.WinPtr) : Int {
 		return 0;
 	}
@@ -183,23 +184,22 @@ class Sdl {
 		return false;
 	}
 
-	@:hlNative("?sdl", "get_display_modes")
+	@:hlNative("sdl", "get_display_modes")
 	static function get_display_modes(displayId : Int) : hl.NativeArray<Dynamic> {
 		return null;
 	}
 
-	@:hlNative("?sdl", "get_current_display_mode")
+	@:hlNative("sdl", "get_current_display_mode")
 	static function get_current_display_mode(displayId : Int, registry : Bool) : Dynamic {
 		return null;
 	}
 
-
-	@:hlNative("?sdl", "get_desktop_display_mode")
+	/*@:hlNative("sdl", "get_desktop_display_mode")
 	static function get_desktop_display_mode(displayId : Int) : Dynamic {
 		return null;
-	}
+	}*/
 
-	@:hlNative("?sdl", "get_displays")
+	@:hlNative("sdl", "get_displays")
 	static function get_displays() : hl.NativeArray<Dynamic> {
 		return null;
 	}
@@ -216,12 +216,12 @@ class Sdl {
 		return @:privateAccess String.fromUTF8(detect_keyboard_layout());
 	}
 
-	@:hlNative("?sdl", "set_clipboard_text")
+	@:hlNative("sdl", "set_clipboard_text")
 	private static function _setClipboardText( text : hl.Bytes ) : Bool {
 		return false;
 	}
 
-	@:hlNative("?sdl", "get_clipboard_text")
+	@:hlNative("sdl", "get_clipboard_text")
 	private static function _getClipboardText() : hl.Bytes {
 		return null;
 	}

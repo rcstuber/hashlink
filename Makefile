@@ -3,13 +3,16 @@ ARCH := $(shell uname -p)
 LBITS := $(shell getconf LONG_BIT)
 MARCH ?= $(LBITS)
 
+#ifeq ($(ARCH), arm)
+#PREFIX = /opt/hl
+#endif
 PREFIX ?= /usr/local
 INSTALL_DIR ?= $(PREFIX)
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
 
-LIBS=fmt sdl openal ui uv mysql ssl
+LIBS=fmt sdl openal ui uv #mysql ssl
 
 CFLAGS = -Wall -O3 -I src -std=c11 -I include -I include/pcre -I include/mikktspace -I include/minimp3 -D LIBHL_EXPORTS
 ifneq ($(ARCH), arm)
